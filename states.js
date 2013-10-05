@@ -37,20 +37,23 @@ a.isArray = function(el) {
  * @param settings
  * @returns {{}}
  */
-a.merge = function() {
-	var ar  = arguments,
-		res = {};
-	for(var i=0, l=ar.length; i<l; ++i) {
-		var o = ar[i];
-		for(var j in o) {
-			if(!res[j]) {
-				res[j] = o[j];
+a.merge = function(defaultSettings, settings) {
+	var	obj = {};
+
+	for(var j in defaultSettings) {
+		if(!obj[j]) {
+			if(a.isObject(settings[j])) {
+				obj[j] = a.merge(defaultSettings[j], settings[j]);
+			} else if(!a.isNull(settings[j])) {
+				obj[j] = settings[j];
+			} else {
+				obj[j] = defaultSettings[j];
 			}
 		}
 	}
-	return res;
-};
 
+	return obj;
+};
 
 /*
 ------------------------------------------------------------------------------------------------------------------------
@@ -59,7 +62,6 @@ a.merge = function() {
  */
 
 function __converterDefault(data) {
-	console.log(data);
 	return data;
 };
 function __postLoadDefault(result) {
@@ -69,9 +71,7 @@ function __postLoadDefault(result) {
 
 
 function __appendDefault($dom) {
-	console.log($dom);
 	return function(content) {
-		console.log(content);
 		var el = $(document).find($dom).get(0);
 		if(a.isNull(el)) {
 			alert("id: " + id + " does not exist");
@@ -80,9 +80,7 @@ function __appendDefault($dom) {
 	};
 };
 function __replaceDefault($dom) {
-	console.log($dom);
 	return function(content) {
-		console.log(content);
 		var el = $(document).find($dom).get(0);
 		if(a.isNull(el)) {
 			alert("id: " + id + " does not exist");
@@ -143,150 +141,162 @@ var StateHelper = function(settings){
 		this[n] = defaultSettings[n];
 	}
 
-	return this;
-};
+	/**
+	 * saveState
+	 * ---
+	 * Add a state to the system
+	 *
+	 * @param state
+	 */
+	this.saveState   = function(state) {
+		if(!a.isNull(this.options.state.parent)) {
+			var prefixDefault = this.options.state.prefix,
+				parentDefault = this.options.state.parent;
+			// We create new id if needed
+			if(prefixDefault != null) {
+				parentDefault = prefixDefault + "-" + parentDefault;
+			}
+			state.parent = parentDefault;
+		}
+		a.state.add(state);
 
-/**
- * saveState
- * ---
- * Add a state to the system
- *
- * @param state
- */
-StateHelper.saveState   = function(state) {
-	if(!a.isNull(this.options.state.parent)) {
-		var prefixDefault = this.options.state.prefix,
-			parentDefault = this.options.state.parent;
+		return this;
+	};
+
+	/**
+	 * Append
+	 * ---
+	 * Method to append content in specific dom element
+	 *
+	 * @param el
+	 * @returns {{}}
+	 */
+	this.append = function(el) {
+		if(!this.validate) {
+			return;
+		}
+
+		var tmp = {};
+
+		this.currentState.load = this.insertMethods.append(el);
+		tmp = this.currentState;
+
+		this.currentState = {};
+		this.validate = 0;
+
+		if(this.save) {
+			this.saveState(tmp);
+		}
+
+		return tmp;
+	}
+
+	/**
+	 * replace
+	 * ---
+	 * Replace to replace content in a specific dom element
+	 *
+	 * @param el
+	 * @returns {{}}
+	 */
+	this.replace = function(el) {
+		if(!this.validate) {
+			return;
+		}
+
+		var tmp = {};
+
+		this.currentState.load = this.insertMethods.replace(el);
+		tmp = this.currentState;
+
+		this.currentState = {};
+		this.validate = 0;
+
+		if(this.save) {
+			this.saveState(tmp);
+		}
+
+		return tmp;
+	}
+
+	/**
+	 * addState
+	 * ---
+	 * Minimal configuration to add a state
+	 *
+	 * @param id
+	 * @param hash
+	 * @param htmlTemplate
+	 * @param data
+	 * @returns {this}
+	 */
+	this.addState = function(id, hash, htmlTemplate, data) {
+		// Function to transform single value of include to array
+		var includeToArray = function(include) {
+			var html = include.html,
+				css  = include.css,
+				js   = include.js;
+
+			if(!a.isArray(html) && html != null) html = [html];
+			if(!a.isArray(css)  && css != null)  css  = [css];
+			if(!a.isArray(js)   && js  != null)   js  = [js];
+
+			if(html == null) include.html = []; else include.html = [html];
+			if(css == null)  include.js   = []; else include.js   = [js];
+			if(js == null)   include.css  = []; else include.css  = [css];
+
+			return include;
+		};
+
+		// We load defaults options
+		var include        = this.options.state.include;
+		var dataDefault    = this.options.data;
+		var prefixDefault  = this.options.state.prefix;
+
+		// We validate include and we push data
+//	include = includeToArray(include);
+		var include  = {};
+		include.html = htmlTemplate;
+
+		// We add dataDefault to data
+		for(var d in dataDefault) {
+			data[d] = dataDefault[d];
+		}
+
 		// We create new id if needed
 		if(prefixDefault != null) {
-			parentDefault = prefixDefault + "-" + parentDefault;
+			id = prefixDefault + "-" + id;
 		}
-		state.parent = parentDefault;
-	}
-	a.state.add(state);
 
-	return this;
-};
+		// We generate a minimal state
+		this.currentState = {
+			id       : id,
+			hash     : hash,
+			include  : include,
+			data     : data,
+			converter: this.options.functions.converter,
+			postLoad : this.options.functions.postLoad
+		};
 
-/**
- * Append
- * ---
- * Method to append content in specific dom element
- *
- * @param el
- * @returns {{}}
- */
-StateHelper.append = function(el) {
-	if(!this.validate) {
-		return;
-	}
+		// The state is valid to be include
+		this.validate = 1;
 
-	var tmp = {};
-
-	this.currentState.load = this.insertMethods.append(el);
-	tmp = this.currentState;
-
-	this.currentState = {};
-	this.validate = 0;
-
-	if(this.save) {
-		this.saveState(tmp);
-	}
-
-	return tmp;
-}
-
-/**
- * replace
- * ---
- * Replace to replace content in a specific dom element
- *
- * @param el
- * @returns {{}}
- */
-StateHelper.replace = function(el) {
-	if(!this.validate) {
-		return;
-	}
-
-	var tmp = {};
-
-	this.currentState.load = this.insertMethods.replace(el);
-	tmp = this.currentState;
-
-	this.currentState = {};
-	this.validate = 0;
-
-	if(this.save) {
-		this.saveState(tmp);
-	}
-
-	return tmp;
-}
-
-/**
- * addState
- * ---
- * Minimal configuration to add a state
- *
- * @param id
- * @param hash
- * @param htmlTemplate
- * @param data
- * @returns {StateHelper}
- */
-StateHelper.addState = function(id, hash, htmlTemplate, data) {
-	// Function to transform single value of include to array
-	var includeToArray = function(include) {
-		var html = include.html,
-			css  = include.css,
-			js   = include.js;
-
-		if(!a.isArray(html) && html != null) html = [html];
-		if(!a.isArray(css)  && css != null)  css  = [css];
-		if(!a.isArray(js)   && js  != null)   js  = [js];
-
-		if(html == null) include.html = []; else include.html = [html];
-		if(css == null)  include.js   = []; else include.js   = [js];
-		if(js == null)   include.css  = []; else include.css  = [css];
-
-		return include;
+		return this;
 	};
 
-	// We load defaults options
-	var include        = this.options.state.include;
-	var dataDefault    = this.options.data;
-	var prefixDefault  = this.options.state.prefix;
+	this.setFunction = function(name, func) {
+		if(!a.isFunction(func)) {
+			a.console.error(name, "It's not a function");
+		}
 
-	// We validate include and we push data
-//	include = includeToArray(include);
-	var include  = {};
-	include.html = htmlTemplate;
-
-	console.log(include);
-
-	// We add dataDefault to data
-	for(var d in dataDefault) {
-		data[d] = dataDefault[d];
-	}
-
-	// We create new id if needed
-	if(prefixDefault != null) {
-		id = prefixDefault + "-" + id;
-	}
-
-	// We generate a minimal state
-	this.currentState = {
-		id       : id,
-		hash     : hash,
-		include  : include,
-		data     : data,
-		converter: this.options.functions.converter,
-		postLoad : this.options.functions.postLoad
+		this.options.functions[name] = func;
+		return this;
 	};
 
-	// The state is valid to be include
-	this.validate = 1;
+	this.setParent = function(stateId) {
+		this.options.state.parent = stateId;
+		return this;
+	};
 
 	return this;
 };
@@ -309,7 +319,7 @@ StateHelper.addState = function(id, hash, htmlTemplate, data) {
  * @returns {*|jQuery|HTMLElement}
  */
 $.fn.addState = function(id, hash, htmlTemplate, data) {
-	this.stateHelper.addState(id, hash, htmlTemplate, data);
+	this.stateHelper  = this.stateHelper.addState(id, hash, htmlTemplate, data);
 	return this;
 };
 
@@ -340,6 +350,16 @@ $.fn.replace   = function() {
 $.fn.use       = function(stateHelper) {
 	this.stateHelper = stateHelper;
 	return this;
+};
+
+$.fn.parent     = function(el) {
+	this.stateHelper = this.stateHelper.setParent(el);
+	return this;
+};
+
+$.fn.postLoad  = function(func) {
+	this.stateHelper = this.stateHelper.setFunction("postLoad", func);
+	return this;
 }
 
 /*
@@ -357,14 +377,14 @@ var $sh = new StateHelper({
 	},
 	save: true
 });
-console.log($sh);
 
 $("div#layout").use($sh).addState("root", null, "templates/layout/default.html", null).append();
-
-$sh.options.state.parent = "root";
-$("div#content").addState("root", "/test", "templates/test/index.html", null).replace();
-
-
-a.message.addListener("a.state.end", function(hash){
-	console.log(hash);
-});
+$("div#content")
+	.use($sh)
+	.parent("root")
+	.postLoad(function(result) {
+		alert("mdr");
+		result.done();
+	})
+	.addState("content", "/test", "templates/test/index.html", null)
+	.replace();
