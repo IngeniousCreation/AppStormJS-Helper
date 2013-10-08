@@ -7,9 +7,9 @@
  */
 
 /*
-------------------------------------------------------------------------------------------------------------------------
-	Helpers
-------------------------------------------------------------------------------------------------------------------------
+ ------------------------------------------------------------------------------------------------------------------------
+ Helpers
+ ------------------------------------------------------------------------------------------------------------------------
  */
 
 /**
@@ -56,15 +56,21 @@ a.merge = function(defaultSettings, settings) {
 };
 
 /*
-------------------------------------------------------------------------------------------------------------------------
-	StateHelper : helpers
-------------------------------------------------------------------------------------------------------------------------
+ ------------------------------------------------------------------------------------------------------------------------
+ StateHelper : helpers
+ ------------------------------------------------------------------------------------------------------------------------
  */
 
+/*
+ * Callbacks
+ */
+
+// On Data
 function __converterDefault(data) {
 	return data;
 };
 
+// Before and after load
 function __preLoadDefault(result) {
 	result.done();
 };
@@ -78,10 +84,14 @@ function __postUnloadDefault(result) {
 	result.done();
 };
 
+// On unload
 function __unloadDefault(result) {
 	result.done();
 };
 
+/*
+ * FinalInsertion, Call on load.
+ */
 function __appendDefault($dom) {
 	return function(content) {
 		var el = $(document).find($dom).get(0);
@@ -102,6 +112,7 @@ function __prependDefault($dom) {
 		$(document).find($dom).prepend(content);
 	};
 };
+// Default function used
 function __replaceDefault($dom) {
 	return function(content) {
 		var el = $(document).find($dom).get(0);
@@ -115,9 +126,9 @@ function __replaceDefault($dom) {
 
 
 /*
-------------------------------------------------------------------------------------------------------------------------
-	StateHelper : main
-------------------------------------------------------------------------------------------------------------------------
+ ------------------------------------------------------------------------------------------------------------------------
+ StateHelper : main
+ ------------------------------------------------------------------------------------------------------------------------
  */
 
 /**
@@ -126,35 +137,37 @@ function __replaceDefault($dom) {
  */
 var StateHelper = function(settings){
 	defaultSettings = {
-		// Configuration Part
-		options       : {
-			state : {
-				prefix : null,
-				parent : null,
-				include: {
-					html: null,
-					css : null,
-					js  : null
-				}
-			},
-			data      : {},
-			functions : {
-				// DATA
-				converter : __converterDefault,
-				// load events
-				preLoad   : __preLoadDefault,
-				postLoad  : __postLoadDefault,
-				// unload
-				unload    : __unloadDefault,
-				// unload events
-				preUnload : __preUnloadDefault,
-				postUnload: __postUnloadDefault
+		// State basic configuration
+		state : {
+			prefix : null,
+			parent : null,
+			include: {
+				html: null,
+				css : null,
+				js  : null
 			}
 		},
+		// Basics datas load by all state
+		data      : {},
+		// Basics callbacks functions used
+		functions : {
+			// Data
+			converter : __converterDefault,
+			// load callbacks
+			preLoad   : __preLoadDefault,
+			postLoad  : __postLoadDefault,
+			// unload
+			unload    : __unloadDefault,
+			// unload callbacks
+			preUnload : __preUnloadDefault,
+			postUnload: __postUnloadDefault
+		},
+		// Temporary variables or functions set for a state by user
 		temporary    : {
 			variables: {},
 			functions: {}
 		},
+		// Define or override insertion methods
 		insertMethods: {
 			append : __appendDefault,
 			prepend: __prependDefault,
@@ -162,7 +175,7 @@ var StateHelper = function(settings){
 		},
 		// Save state
 		save : false,
-		// Current State Part
+		// Temporary state would be to save in AppStormJS
 		currentState : {},
 		// Valid State Insertion ?
 		validate : 0
@@ -189,15 +202,16 @@ var StateHelper = function(settings){
  * @param state
  */
 StateHelper.prototype.saveState   = function(state) {
-	if(!a.isNull(this.options.state.parent)) {
-		var prefixDefault = this.options.state.prefix,
-			parentDefault = this.options.state.parent;
+	if(!a.isNull(this.state.parent)) {
+		var prefixDefault = this.state.prefix,
+			parentDefault = this.state.parent;
 		// We create new id if needed
 		if(prefixDefault != null) {
 			parentDefault = prefixDefault + "-" + parentDefault;
 		}
 		state.parent = parentDefault;
 	}
+
 	a.state.add(state);
 
 	return this;
@@ -206,7 +220,7 @@ StateHelper.prototype.saveState   = function(state) {
 StateHelper.prototype.insert = function(el, method) {
 	// If the state are not valid we stop execution
 	if(!this.validate) {
-		return;
+		return null;
 	}
 
 	// We load all temporary functions (set by user for the current state)
@@ -219,8 +233,8 @@ StateHelper.prototype.insert = function(el, method) {
 	var postLoad   = this.temporary.functions.postLoad;
 
 	// We load default functions
-	var preLoadDefault  = this.options.functions.preLoad;
-	var postLoadDefault = this.options.functions.postLoad;
+	var preLoadDefault  = this.functions.preLoad;
+	var postLoadDefault = this.functions.postLoad;
 
 	// Use custom converter
 	if(!a.isNull(converter)) {
@@ -287,7 +301,7 @@ StateHelper.prototype.insert = function(el, method) {
 	}
 
 	return state;
-}
+};
 
 /**
  * Append
@@ -299,7 +313,7 @@ StateHelper.prototype.insert = function(el, method) {
  */
 StateHelper.prototype.append = function(el) {
 	return this.insert(el, "append");
-}
+};
 
 /**
  * replace
@@ -311,7 +325,7 @@ StateHelper.prototype.append = function(el) {
  */
 StateHelper.prototype.replace = function(el) {
 	return this.insert(el, "replace");
-}
+};
 
 /**
  * addState
@@ -325,30 +339,12 @@ StateHelper.prototype.replace = function(el) {
  * @returns {this}
  */
 StateHelper.prototype.addState = function(id, hash, htmlTemplate, data) {
-	// Function to transform single value of include to array
-	var includeToArray = function(include) {
-		var html = include.html,
-			css  = include.css,
-			js   = include.js;
-
-		if(!a.isArray(html) && html != null) html = [html];
-		if(!a.isArray(css)  && css != null)  css  = [css];
-		if(!a.isArray(js)   && js  != null)   js  = [js];
-
-		if(html == null) include.html = []; else include.html = [html];
-		if(css == null)  include.js   = []; else include.js   = [js];
-		if(js == null)   include.css  = []; else include.css  = [css];
-
-		return include;
-	};
-
 	// We load defaults options
-	var include       = this.options.state.include;
-	var dataDefault   = this.options.data;
-	var prefixDefault = this.options.state.prefix;
+	var include       = this.state.include;
+	var dataDefault   = this.data;
+	var prefixDefault = this.state.prefix;
 
 	// We validate include and we push data
-//	include = includeToArray(include);
 	var include  = {};
 	include.html = htmlTemplate;
 
@@ -368,11 +364,11 @@ StateHelper.prototype.addState = function(id, hash, htmlTemplate, data) {
 		hash      : hash,
 		include   : include,
 		data      : data,
-		converter : this.options.functions.converter,
-		preLoad   : this.options.functions.preLoad,
-		postLoad  : this.options.functions.postLoad,
-		preUnload : this.options.functions.preUnload,
-		postUnload: this.options.functions.postUnload
+		converter : this.functions.converter,
+		preLoad   : this.functions.preLoad,
+		postLoad  : this.functions.postLoad,
+		preUnload : this.functions.preUnload,
+		postUnload: this.functions.postUnload
 	};
 
 	// The state is valid to be include
@@ -382,7 +378,19 @@ StateHelper.prototype.addState = function(id, hash, htmlTemplate, data) {
 };
 
 StateHelper.prototype.setParent = function(stateId) {
-	this.options.state.parent = stateId;
+	this.state.parent = stateId;
+	return this;
+};
+
+StateHelper.prototype.setInclude = function(name, files) {
+	if(a.isString(files)) {
+		this.currentState.include[name] = files;
+	} else if (a.isArray(files)) {
+		for(var f in files) {
+			this.currentState.include[name].push(files[f]);
+		}
+	}
+
 	return this;
 };
 
@@ -406,10 +414,10 @@ StateHelper.prototype.setLoadAfter = function(idList) {
 };
 
 /*
-------------------------------------------------------------------------------------------------------------------------
-	jQuery Like
-------------------------------------------------------------------------------------------------------------------------
-*/
+ ------------------------------------------------------------------------------------------------------------------------
+ jQuery Like
+ ------------------------------------------------------------------------------------------------------------------------
+ */
 
 /**
  * use
@@ -466,6 +474,13 @@ $.fn.postLoad  = function(func) {
 	return this;
 };
 
+$.fn.file = function(name, files) {
+	if(name == "html" || name == "js" || name == "css") {
+		this.stateHelper = this.stateHelper.setInclude(name, files);
+	}
+	return this;
+};
+
 
 /**
  * converter
@@ -509,9 +524,9 @@ $.fn.loadBefore = function(idList) {
 /**
  * append
  * ---
- * Final method, she define the method of content integration and she can also save the state directly
+ * She define the method of content integration and she can also save the state directly
  *
- * @returns {{}}
+ * @returns {$.fn}
  */
 $.fn.append = function() {
 	var el  = $(this).selector;
@@ -522,9 +537,9 @@ $.fn.append = function() {
 /**
  * replace
  * ---
- * Final method, she define the method of content integration and she can also save the state directly
+ * She define the method of content integration and she can also save the state directly
  *
- * @returns {{}}
+ * @returns {$.fn}
  */
 $.fn.replace = function() {
 	var el  = $(this).selector;
@@ -532,7 +547,14 @@ $.fn.replace = function() {
 	return this;
 };
 
+/**
+ * save
+ * ---
+ * Final methods, she save the current state, if the user have not define automatic save.
+ *
+ * @returns {{}}
+ */
 $.fn.save = function() {
 	this.stateHelper.saveState(this.stateHelper.currentState);
-	return this;
+	return this.currentState;
 };
