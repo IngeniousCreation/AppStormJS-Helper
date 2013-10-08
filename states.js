@@ -200,6 +200,7 @@ var StateHelper = function(settings){
  * Add a state to the system
  *
  * @param state
+ * @returns {StateHelper}
  */
 StateHelper.prototype.saveState   = function(state) {
 	if(!a.isNull(this.state.parent)) {
@@ -217,6 +218,15 @@ StateHelper.prototype.saveState   = function(state) {
 	return this;
 };
 
+/**
+ * insert
+ * ---
+ * Can be the final function. If save is true we save the current state.
+ *
+ * @param el
+ * @param method
+ * @returns {*}
+ */
 StateHelper.prototype.insert = function(el, method) {
 	// If the state are not valid we stop execution
 	if(!this.validate) {
@@ -306,7 +316,7 @@ StateHelper.prototype.insert = function(el, method) {
 /**
  * Append
  * ---
- * Method to append content in specific dom element
+ * Method to append content in specific dom element.
  *
  * @param el
  * @returns {{}}
@@ -318,7 +328,7 @@ StateHelper.prototype.append = function(el) {
 /**
  * replace
  * ---
- * Replace to replace content in a specific dom element
+ * Replace to replace content in a specific dom element.
  *
  * @param el
  * @returns {{}}
@@ -330,7 +340,7 @@ StateHelper.prototype.replace = function(el) {
 /**
  * addState
  * ---
- * Minimal configuration to add a state
+ * Minimal configuration to add a state.
  *
  * @param id
  * @param hash
@@ -377,11 +387,28 @@ StateHelper.prototype.addState = function(id, hash, htmlTemplate, data) {
 	return this;
 };
 
+/**
+ * setParent
+ * ---
+ * Define a parent for a state.
+ *
+ * @param stateId
+ * @returns {StateHelper}
+ */
 StateHelper.prototype.setParent = function(stateId) {
 	this.state.parent = stateId;
 	return this;
 };
 
+/**
+ * setInclude
+ * ---
+ * Add resources files to a specific state.
+ *
+ * @param name
+ * @param files
+ * @returns {StateHelper}
+ */
 StateHelper.prototype.setInclude = function(name, files) {
 	if(a.isString(files)) {
 		this.currentState.include[name] = files;
@@ -394,6 +421,15 @@ StateHelper.prototype.setInclude = function(name, files) {
 	return this;
 };
 
+/**
+ * setFunction
+ * ---
+ * setFunction override basics callbacks of settings.
+ *
+ * @param name
+ * @param func
+ * @returns {StateHelper}
+ */
 StateHelper.prototype.setFunction = function(name, func) {
 	if(!a.isFunction(func)) {
 		a.console.error(name, "It's not a function");
@@ -403,11 +439,27 @@ StateHelper.prototype.setFunction = function(name, func) {
 	return this;
 };
 
+/**
+ * setLoadBefore
+ * ---
+ * Set a temporary variables of state's id need to load before state loading
+ *
+ * @param idList
+ * @returns {StateHelper}
+ */
 StateHelper.prototype.setLoadBefore = function(idList) {
 	this.temporary.variables.loadBefore = idList;
 	return this;
 };
 
+/**
+ * setLoadAfter
+ * ---
+ * Set a temporary variables of state's id need to load after state loading
+ *
+ * @param idList
+ * @returns {StateHelper}
+ */
 StateHelper.prototype.setLoadAfter = function(idList) {
 	this.temporary.variables.loadAfter = idList;
 	return this;
@@ -474,6 +526,15 @@ $.fn.postLoad  = function(func) {
 	return this;
 };
 
+/**
+ * file
+ * ---
+ * jQuery binding to StateHelper.setInclude
+ *
+ * @param name
+ * @param files
+ * @returns {$.fn}
+ */
 $.fn.file = function(name, files) {
 	if(name == "html" || name == "js" || name == "css") {
 		this.stateHelper = this.stateHelper.setInclude(name, files);
