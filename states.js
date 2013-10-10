@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * HelperState
  * ---
@@ -7,10 +9,10 @@
  */
 
 /*
- ------------------------------------------------------------------------------------------------------------------------
- Helpers
- ------------------------------------------------------------------------------------------------------------------------
- */
+------------------------------------------------------------------------------------------------------------------------
+Helpers
+------------------------------------------------------------------------------------------------------------------------
+*/
 
 /**
  * isArray
@@ -56,16 +58,15 @@ a.merge = function(defaultSettings, settings) {
 };
 
 /*
- ------------------------------------------------------------------------------------------------------------------------
- StateHelper : helpers
- ------------------------------------------------------------------------------------------------------------------------
- */
+------------------------------------------------------------------------------------------------------------------------
+StateHelper : helpers
+------------------------------------------------------------------------------------------------------------------------
+*/
 
 /*
  * Callbacks
  */
 
-// On Data
 function __converterDefault(data) {
 	return data;
 };
@@ -89,9 +90,6 @@ function __unloadDefault(result) {
 	result.done();
 };
 
-/*
- * FinalInsertion, Call on load.
- */
 function __appendDefault($dom) {
 	return function(content) {
 		var el = $(document).find($dom).get(0);
@@ -112,7 +110,6 @@ function __prependDefault($dom) {
 		$(document).find($dom).prepend(content);
 	};
 };
-// Default function used
 function __replaceDefault($dom) {
 	return function(content) {
 		var el = $(document).find($dom).get(0);
@@ -126,17 +123,17 @@ function __replaceDefault($dom) {
 
 
 /*
- ------------------------------------------------------------------------------------------------------------------------
- StateHelper : main
- ------------------------------------------------------------------------------------------------------------------------
- */
+------------------------------------------------------------------------------------------------------------------------
+StateHelper : main
+------------------------------------------------------------------------------------------------------------------------
+*/
 
 /**
  * Principal Scope : StateHelper
  * @type {{}}
  */
-var StateHelper = function(settings){
-	defaultSettings = {
+var StateHelper = function(settings) {
+	var defaultSettings = {
 		// State basic configuration
 		state : {
 			prefix : null,
@@ -162,9 +159,12 @@ var StateHelper = function(settings){
 			preUnload : __preUnloadDefault,
 			postUnload: __postUnloadDefault
 		},
+		// Default listeners
+		listeners    : [],
 		// Temporary variables or functions set for a state by user
 		temporary    : {
 			variables: {},
+			listeners: [],
 			functions: {}
 		},
 		// Define or override insertion methods
@@ -179,7 +179,7 @@ var StateHelper = function(settings){
 		currentState : {},
 		// Valid State Insertion ?
 		validate : 0
-	}
+	};
 
 	if(a.isNull(settings)) {
 		settings = {};
@@ -236,15 +236,29 @@ StateHelper.prototype.insert = function(el, method) {
 	// We load all temporary functions (set by user for the current state)
 	var converter  = this.temporary.functions.converter;
 
-	var loadBefore = this.temporary.variables.loadBefore;
-	var loadAfter  = this.temporary.variables.loadAfter;
+	// Load Before and After id's of state
+	var loadBefore = this.temporary.variables.loadBefore,
+		loadAfter  = this.temporary.variables.loadAfter;
 
-	var preLoad    = this.temporary.functions.preLoad;
-	var postLoad   = this.temporary.functions.postLoad;
+	// Callbacks functions
+	var preLoad    = this.temporary.functions.preLoad,
+		postLoad   = this.temporary.functions.postLoad,
+		preUnload  = this.temporary.functions.preUnload,
+		postUnload = this.temporary.functions.postUnload;
 
 	// We load default functions
-	var preLoadDefault  = this.functions.preLoad;
-	var postLoadDefault = this.functions.postLoad;
+	var preLoadDefault    = this.functions.preLoad,
+		postLoadDefault   = this.functions.postLoad,
+		preUnloadDefault  = this.functions.preUnload,
+		postUnloadDefault = this.functions.postUnload;
+
+	// We load default and custom listeners
+	var defaultListeners = this.listeners,
+		listeners       = this.temporary.listeners;
+	// We push default listeners in our listerners
+	for(var i in defaultListeners) {
+		listeners.push(defaultListeners[i]);
+	}
 
 	// Use custom converter
 	if(!a.isNull(converter)) {
@@ -252,40 +266,109 @@ StateHelper.prototype.insert = function(el, method) {
 	}
 
 	// Use custom preLoad or loadBefore
-	if(!a.isNull(preLoad) || !a.isNull(loadBefore)) {
-		this.currentState.preLoad = function(result) {
-			if(!a.isNull(loadBefore) && a.isArray(loadBefore)) {
-				for(i=0; i < loadBefore.length; i++) {
-					if(a.isString(loadBefore[i])) {
-						a.state.loadById(loadBefore[i]);
-					}
+	this.currentState.preLoad = function(result) {
+		// We load state's Id
+		if(!a.isNull(loadBefore) && a.isArray(loadBefore)) {
+			for(var i=0; i < loadBefore.length; i++) {
+				if(a.isString(loadBefore[i])) {
+					a.state.loadById(loadBefore[i]);
 				}
 			}
+		}
 
-			if(!a.isNull(preLoad)) {
-				if(!preLoad(result)) result.fail(); else result.done();
-			} else {
-				preLoadDefault(result);
+		// We add all appstorm events
+		if(!a.isNull(listeners)) {
+			for(var i = 0; i < listeners.length; i++) {
+				var type = listeners[i].type,
+					on   = listeners[i].on,
+					func = listeners[i].func;
+
+				if (type == "appstorm") {
+					a.message.addListener(on, func);
+				}
 			}
+		}
+
+		// We call a specific postLoad if needed
+		if(!a.isNull(preLoad)) {
+			if(!preLoad(result)) result.fail(); else result.done();
+		} else {
+			preLoadDefault(result);
 		}
 	}
 
 	// Use custom postLoad or loadAfter
-	if(!a.isNull(postLoad) || !a.isNull(loadAfter)) {
-		this.currentState.postLoad = function(result) {
-			if(!a.isNull(loadAfter) && a.isArray(loadAfter)) {
-				for(i=0; i < loadAfter.length; i++) {
-					if(a.isString(loadAfter[i])) {
-						a.state.loadById(loadAfter[i]);
-					}
+	this.currentState.postLoad = function(result) {
+		// We load state's Id
+		if(!a.isNull(loadAfter) && a.isArray(loadAfter)) {
+			for(var i=0; i < loadAfter.length; i++) {
+				if(a.isString(loadAfter[i])) {
+					a.state.loadById(loadAfter[i]);
 				}
 			}
+		}
 
-			if(!a.isNull(postLoad)) {
-				if(!postLoad(result)) result.fail(); else result.done();
-			} else {
-				postLoadDefault(result);
+		// We add all jquery listeners
+		if(!a.isNull(listeners)) {
+			for(var i = 0; i < listeners.length; i++) {
+				var type = listeners[i].type,
+					on   = listeners[i].on,
+					func = listeners[i].func;
+
+				if(type == "jquery") {
+					$(on[0]).on(on[1], func);
+				}
 			}
+		}
+
+		// We call a specific postLoad if needed
+		if(!a.isNull(postLoad)) {
+			if(!postLoad(result)) result.fail(); else result.done();
+		} else {
+			postLoadDefault(result);
+		}
+	}
+
+	// Use custom preUnload
+	this.currentState.preUnload = function(result) {
+		// We remove all jquery listeners
+		if(!a.isNull(listeners)) {
+			for(var i = 0; i < listeners.length; i++) {
+				var type = listeners[i].type,
+					on   = listeners[i].on,
+					func = listeners[i].func;
+
+				if(type == "jquery") {
+					$(on[0]).off(on[1], func);
+				}
+			}
+		}
+
+		if(!a.isNull(preUnload)) {
+			if(!preUnload(result)) result.fail(); else result.done();
+		} else preUnloadDefault(result);
+	}
+
+	// Use custom postUnload
+	this.currentState.postUnload =  function(result) {
+		// We remove all appstorm listeners
+		if(!a.isNull(listeners)) {
+			for(var i = 0; i < listeners.length; i++) {
+				var type = listeners[i].type,
+					on   = listeners[i].on,
+					func = listeners[i].func;
+
+				if (type == "appstorm") {
+					a.message.removeListener(on, func);
+				}
+			}
+		}
+
+		// We call a specific postUnload if needed
+		if(!a.isNull(postUnload)) {
+			if(!postUnload(result)) result.fail(); else result.done();
+		} else {
+			postUnloadDefault(result);
 		}
 	}
 
@@ -304,8 +387,10 @@ StateHelper.prototype.insert = function(el, method) {
 		// Reset currentState and associated variables, functions.
 		this.currentState = {};
 		this.temporary.variables = {};
+		this.temporary.listeners = [];
 		this.temporary.functions = {};
 		this.validate = 0;
+
 		// Save State
 		this.saveState(state);
 	}
@@ -346,12 +431,12 @@ StateHelper.prototype.replace = function(el) {
  * @param hash
  * @param htmlTemplate
  * @param data
- * @returns {this}
+ * @returns {StateHelper}
  */
 StateHelper.prototype.addState = function(id, hash, htmlTemplate, data) {
 	// We load defaults options
-	var include       = this.state.include;
 	var dataDefault   = this.data;
+	var include       = this.state.include;
 	var prefixDefault = this.state.prefix;
 
 	// We validate include and we push data
@@ -410,6 +495,10 @@ StateHelper.prototype.setParent = function(stateId) {
  * @returns {StateHelper}
  */
 StateHelper.prototype.setInclude = function(name, files) {
+	if(a.isNull(this.currentState.include[name])) {
+		this.currentState.include[name] = [];
+	}
+
 	if(a.isString(files)) {
 		this.currentState.include[name] = files;
 	} else if (a.isArray(files)) {
@@ -440,6 +529,25 @@ StateHelper.prototype.setFunction = function(name, func) {
 };
 
 /**
+ * setListener
+ * ---
+ * setListener define new listener for a specific state.
+ *
+ * @param type
+ * @param name
+ * @param func
+ * @returns {StateHelper}
+ */
+StateHelper.prototype.setListener = function(type, name, func) {
+	if(a.isNull(type) || (type != "appstorm" && type != "jquery")) {
+		a.console.error("This type is not define in StateHelper! Sorry.");
+	}
+
+	this.temporary.listeners.push({type: type, on: name, func: func});
+	return this;
+};
+
+/**
  * setLoadBefore
  * ---
  * Set a temporary variables of state's id need to load before state loading
@@ -466,10 +574,10 @@ StateHelper.prototype.setLoadAfter = function(idList) {
 };
 
 /*
- ------------------------------------------------------------------------------------------------------------------------
- jQuery Like
- ------------------------------------------------------------------------------------------------------------------------
- */
+------------------------------------------------------------------------------------------------------------------------
+jQuery Like
+------------------------------------------------------------------------------------------------------------------------
+*/
 
 /**
  * use
@@ -514,15 +622,82 @@ $.fn.addState = function(id, hash, htmlTemplate, data) {
 };
 
 /**
+ * converter
+ * ---
+ * jQuery binding to StateHelper.converter
+ *
+ * @param func
+ * @returns {$.fn}
+ */
+$.fn.converter = function(func) {
+	this.stateHelper = this.stateHelper.setFunction("converter", func);
+	return this;
+};
+
+/**
+ * preUnload
+ * ---
+ * jQuery bindong to StateHelper.setFunction("preUnload", fct)
+ *
+ * @param func
+ * @returns {$.fn}
+ */
+$.fn.preLoad = function(func) {
+	this.stateHelper = this.stateHelper.setFunction("preUnload", func);
+	return this;
+};
+
+/**
  * postLoad
  * ---
- * jQuery binding to StateHelper.postLoad
+ * jQuery binding to StateHelper.setFunction("postLoad", fct)
  *
  * @param func
  * @returns {$.fn}
  */
 $.fn.postLoad  = function(func) {
 	this.stateHelper = this.stateHelper.setFunction("postLoad", func);
+	return this;
+};
+
+/**
+ * preUnload
+ * ---
+ * jQuery binding to StateHelper.setFunction("preUnload", fct)
+ *
+ * @param func
+ * @returns {$.fn}
+ */
+$.fn.preUnload = function(func) {
+	this.stateHelper = this.stateHelper.setFunction("preUnload", func);
+	return this;
+};
+
+/**
+ * postUnload
+ * ---
+ * jQuery binding to StateHelper.setFunction("postUnload", fct)
+ *
+ * @param func
+ * @returns {$.fn}
+ */
+$.fn.postUnload = function(func) {
+	this.stateHelper = this.stateHelper.setFunction("postUnload", func);
+	return this;
+};
+
+/**
+ * addListener
+ * ---
+ * jQuery binding to StateHelper.setAddListener
+ *
+ * @param type appstorm | jquery
+ * @param on   event to call. If it's jquery [dom, jQuery event]
+ * @param func function
+ * @returns {$.fn}
+ */
+$.fn.addListener = function(type, on, func) {
+	this.stateHelper = this.stateHelper.setListener(type, on, func);
 	return this;
 };
 
@@ -539,20 +714,6 @@ $.fn.file = function(name, files) {
 	if(name == "html" || name == "js" || name == "css") {
 		this.stateHelper = this.stateHelper.setInclude(name, files);
 	}
-	return this;
-};
-
-
-/**
- * converter
- * ---
- * jQuery binding to StateHelper.converter
- *
- * @param func
- * @returns {$.fn}
- */
-$.fn.converter = function(func) {
-	this.stateHelper = this.stateHelper.setFunction("converter", func);
 	return this;
 };
 
@@ -589,7 +750,7 @@ $.fn.loadBefore = function(idList) {
  *
  * @returns {$.fn}
  */
-$.fn.append = function() {
+$.fn.insertAfter = function() {
 	var el  = $(this).selector;
 	this.stateHelper.append(el);
 	return this;
