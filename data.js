@@ -10,35 +10,98 @@
 
 var DataHelper = function(settings) {
 
-    // Default Settings
     var defaultSettings = {
         configuration : "local",
         // Basics Parameters
         secureUrl  : ["https://localhost/", "80"],
         unsecureUrl: ["http://localhost/", "80"],
         // Basics callbacks
-        success    : function() {
+        success: function() {
             console.log("default success");
         },
-        error      : function() {
+        error: function() {
             console.log("default error");
         },
+        getHost: function(path) {
+            if(a.isArray(path)) {
+                var secure = path[1];
+                secure = secure || false;
+
+                path = path[0]
+            } else {
+                var secure = false;
+            }
+
+            var that = this,
+                host = null,
+                s    = null;
+
+            if(secure) {
+                s = this.secureUrl;
+            } else {
+                s = this.unsecureUrl;
+            }
+
+            if(!a.isNull(path)) {
+                host = s[0] + ":" + s[1] + "/" + s[2] + "/" + path;
+            } else {
+                host = s[0] + ":" + s[1] + "/" + s[2];
+            }
+
+            return host;
+        },
         // Basics functions on datas
-        send       : function(d, success, error) {
-
+        post: function(path, data, success, error) {
+            var that = this,
+                request = ajax({
+                    type        : "POST",
+                    url         : that.getHost(path),
+                    data        : (!a.isNull(data)) ? a.parser.json.stringify(data) : null
+                });
+            return request;
         },
-        receive    : function(d, success, error) {
-
+        get: function(path, data, success, error) {
+            var that = this,
+                request = ajax({
+                    type        : "GET",
+                    url         : that.getHost(path),
+                    data        : (!a.isNull(data)) ? a.parser.json.stringify(data) : null
+                });
+            return request;
         },
-        // Basics functions on login or register
-        login      : function() {
-
+        delete: function(path, data, success, error) {
+            var that = this,
+            request = ajax({
+                type        : "DELETE",
+                url         : that.getHost(path),
+                data        : (!a.isNull(data)) ? a.parser.json.stringify(data) : null
+            });
+            return request;
         },
-        register   : function() {
-
+        receive: function(data) {
+            return data;
         },
-        logout     : function() {
+        send: function(data) {
+            return data;
+        },
+        make: function(type, path, data, success, error) {
+            var that = this;
 
+            this[type](path, this.send(data), success, error)
+            .fail(function(data){
+                if(!a.isNull(error)) {
+                    error(that.receive(data));
+                } else {
+                    that.error();
+                }
+            })
+            .done(function(data){
+                if(!a.isNull(success)) {
+                    success(that.receive(data));
+                } else {
+                    that.success();
+                }
+            });
         }
     };
 
@@ -57,37 +120,14 @@ DataHelper.prototype.use = function(name, parameters) {
     return this.settings[name].apply(this, parameters);
 };
 
-DataHelper.prototype.make = function(name, parameters) {
-    var data = this.use("send", parameters);
+DataHelper.prototype.get = function(path, data, success, error) {
+    this.settings.make("get", path, data, success, error);
 };
 
-var $apiPHP = new DataHelper({
-    name          : "",
-    configuration : "local",
-    // Basics Parameters
-    secureUrl  : ["/foodMaps/api/public/", "80"],
-    unsecureUrl: ["/foodMaps/api/public/", "80"],
-    send       : function(path, data, secure) {
-        secure = secure || false;
+DataHelper.prototype.post = function(path, data, success, error) {
+    this.settings.make("post", path, data, success, error);
+};
 
-        var that = this,
-            host = null;
-
-        if(secure) {
-            host = this.settings.secureUrl[0] + path;
-        } else {
-            host = this.settings.unsecureUrl[0] + path;
-        }
-
-        $.post(host, data, function(data) {
-
-        });
-    }
-});
-
-$apiPHP.use("send", ["users/signin", {
-    data : {
-        username : "ll",
-        password : "test"
-    }
-}]);
+DataHelper.prototype.delete = function(path, data, success, error) {
+    this.settings.make("delete", path, data, success, error);
+};
