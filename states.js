@@ -572,3 +572,10 @@ StateHelper.prototype.setLoadAfter = function(idList) {
 	this.temporary.variables.loadAfter = idList;
 	return this;
 };
+
+StateHelper.prototype.redirect = function(stateHelper, id) {
+    if(!a.isNull(stateHelper.prefix)) {
+        id = stateHelper.prefix+'-'+ id;
+    }
+    a.state.forceReloadById(id)
+};
