@@ -10,55 +10,6 @@
 
 /*
 ------------------------------------------------------------------------------------------------------------------------
-Helpers
-------------------------------------------------------------------------------------------------------------------------
-*/
-
-/**
- * isArray
- * ---
- * Check if an element is an array
- *
- * @param el
- * @returns {boolean}
- */
-a.isArray = function(el) {
-	if( Object.prototype.toString.call(el) === '[object Array]' ) {
-		return true;
-	} else {
-		return false;
-	}
-};
-
-/**
- * merge
- * ---
- * merge to objects
- *
- * @param defaultSettings
- * @param settings
- * @returns {{}}
- */
-a.merge = function(defaultSettings, settings) {
-	var	obj = {};
-
-	for(var j in defaultSettings) {
-		if(!obj[j]) {
-			if(a.isObject(settings[j])) {
-				obj[j] = a.merge(defaultSettings[j], settings[j]);
-			} else if(!a.isNull(settings[j])) {
-				obj[j] = settings[j];
-			} else {
-				obj[j] = defaultSettings[j];
-			}
-		}
-	}
-
-	return obj;
-};
-
-/*
-------------------------------------------------------------------------------------------------------------------------
 StateHelper : helpers
 ------------------------------------------------------------------------------------------------------------------------
 */
@@ -134,10 +85,12 @@ StateHelper : main
  */
 var StateHelper = function(settings) {
 	var defaultSettings = {
+        HTMLTemplate : "templates",
 		// State basic configuration
 		state : {
 			prefix : null,
-			parent : null,
+            hash   : null,
+            parent : null,
 			include: {
 				html: null,
 				css : null,
@@ -205,8 +158,12 @@ var StateHelper = function(settings) {
 StateHelper.prototype.saveState   = function(state) {
 	if(!a.isNull(this.state.parent)) {
 		var prefixDefault = this.state.prefix,
-			parentDefault = this.state.parent;
+			parentDefault = this.state.parent,
+            hashDefault   = this.state.hash;
 		// We create new id if needed
+        if(hashDefault != null) {
+            parentDefault = hashDefault + "-" + parentDefault;
+        }
 		if(prefixDefault != null) {
 			parentDefault = prefixDefault + "-" + parentDefault;
 		}
@@ -435,18 +392,36 @@ StateHelper.prototype.replace = function(el) {
  */
 StateHelper.prototype.addState = function(id, hash, htmlTemplate, data) {
 	// We load defaults options
-	var dataDefault   = this.data;
-	var include       = this.state.include;
-	var prefixDefault = this.state.prefix;
+	var dataDefault   = this.data,
+        tplDefault    = this.HTMLTemplate,
+        hashDefault   = this.state.hash,
+	    prefixDefault = this.state.prefix,
+        include       = this.state.include;
 
 	// We validate include and we push data
 	var include  = {};
-	include.html = htmlTemplate;
+    if(!a.isNull(this.state.parent)) {
+        if(!a.isNull(hashDefault)) {
+            include.html = tplDefault + "/" + prefixDefault + "/" + hashDefault + "/" + htmlTemplate + ".html";
+        } else {
+            include.html = tplDefault + "/" + prefixDefault + "/" + htmlTemplate + ".html";
+        }
+    } else {
+        include.html = htmlTemplate;
+    }
 
 	// We add dataDefault to data
 	for(var d in dataDefault) {
 		data[d] = dataDefault[d];
 	}
+
+    if(!a.isNull(hash) && !a.isNull(hashDefault)) {
+        hash = "/" + hashDefault + "/" + hash;
+    }
+
+    if(!a.isNull(hashDefault)) {
+        id = hashDefault + "-" + id;
+    }
 
 	// We create new id if needed
 	if(prefixDefault != null) {

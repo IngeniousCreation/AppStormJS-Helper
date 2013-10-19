@@ -32,8 +32,7 @@ var DataHelper = function(settings) {
                 var secure = false;
             }
 
-            var that = this,
-                host = null,
+            var host = null,
                 s    = null;
 
             if(secure) {
@@ -60,6 +59,15 @@ var DataHelper = function(settings) {
                 });
             return request;
         },
+        put: function(path, data, success, error) {
+            var that = this,
+                request = ajax({
+                    type        : "PUT",
+                    url         : that.getHost(path),
+                    data        : (!a.isNull(data)) ? a.parser.json.stringify(data) : null
+                });
+            return request;
+        },
         get: function(path, data, success, error) {
             var that = this,
                 request = ajax({
@@ -71,11 +79,20 @@ var DataHelper = function(settings) {
         },
         delete: function(path, data, success, error) {
             var that = this,
-            request = ajax({
-                type        : "DELETE",
-                url         : that.getHost(path),
-                data        : (!a.isNull(data)) ? a.parser.json.stringify(data) : null
-            });
+                request = ajax({
+                    type        : "DELETE",
+                    url         : that.getHost(path),
+                    data        : (!a.isNull(data)) ? a.parser.json.stringify(data) : null
+                });
+            return request;
+        },
+        head: function(path, data, success, error) {
+            var that = this,
+                request = ajax({
+                    type        : "HEAD",
+                    url         : that.getHost(path),
+                    data        : (!a.isNull(data)) ? a.parser.json.stringify(data) : null
+                });
             return request;
         },
         receive: function(data) {
@@ -128,6 +145,14 @@ DataHelper.prototype.post = function(path, data, success, error) {
     this.settings.make("post", path, data, success, error);
 };
 
+DataHelper.prototype.put = function(path, data, success, error) {
+    this.settings.make("put", path, data, success, error);
+};
+
 DataHelper.prototype.delete = function(path, data, success, error) {
     this.settings.make("delete", path, data, success, error);
+};
+
+DataHelper.prototype.head = function(path, data, success, error) {
+    this.settings.make("head", path, data, success, error);
 };

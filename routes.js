@@ -26,30 +26,18 @@
 ------------------------------------------------------------------------------------------------------------------------
 */
 
-var RouteHelper = function(name, stateHelpers, rules, input, output) {
-
+var RouteHelper = function() {
+    this.routers = {};
 };
 
-RouteHelper.prototype.defineStateHelpers = function(stateHelpers) {
-
+RouteHelper.prototype.set = function(name, rule, output) {
+    this.routers[name] = {
+        rule  : rule,
+        output: output
+    }
 };
 
-RouteHelper.prototype.defineRules = function(rules) {
-
-};
-
-RouteHelper.prototype.defineInput = function(input) {
-
-};
-
-RouteHelper.prototype.defineOutput = function(output) {
-
-};
-
-RouteHelper.prototype.start = function() {
-
-};
-
-RouteHelper.prototype.stop = function() {
-
+RouteHelper.prototype.get = function(name, input) {
+    var router = this.routers[name];
+    window.location.hash = (router.output[router.rule(input)]);
 };
