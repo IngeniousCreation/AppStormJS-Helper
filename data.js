@@ -41,10 +41,10 @@ var DataHelper = function(settings) {
                 s = this.unsecureUrl;
             }
 
-            if(!a.isNull(path)) {
+            if(!a.isNull(s[2])) {
                 host = s[0] + ":" + s[1] + "/" + s[2] + "/" + path;
             } else {
-                host = s[0] + ":" + s[1] + "/" + s[2];
+                host = s[0] + ":" + s[1] + "/" + path;
             }
 
             return host;
