@@ -28,14 +28,14 @@ $.fn.use = function(stateHelper) {
 };
 
 /**
- * parent
+ * setParent
  * ---
  * jQuery binding to StateHelper.setParent
  *
  * @param el
  * @returns {$.fn}
  */
-$.fn.parent = function(el) {
+$.fn.setParent = function(el) {
 	this.stateHelper = this.stateHelper.setParent(el);
 	return this;
 };
@@ -145,7 +145,7 @@ $.fn.addListener = function(type, on, func) {
  * @param files
  * @returns {$.fn}
  */
-$.fn.file = function(name, files) {
+$.fn.addFile = function(name, files) {
 	if(name == "html" || name == "js" || name == "css") {
 		this.stateHelper = this.stateHelper.setInclude(name, files);
 	}

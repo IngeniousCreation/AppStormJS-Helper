@@ -105,20 +105,20 @@ var DataHelper = function(settings) {
             var that = this;
 
             this[type](path, this.send(data), success, error)
-            .fail(function(data){
-                if(!a.isNull(error)) {
-                    error(that.receive(data));
-                } else {
-                    that.error();
-                }
-            })
-            .done(function(data){
-                if(!a.isNull(success)) {
-                    success(that.receive(data));
-                } else {
-                    that.success();
-                }
-            });
+                .fail(function(data){
+                    if(!a.isNull(error)) {
+                        error(that.receive(data));
+                    } else {
+                        that.error();
+                    }
+                })
+                .done(function(data){
+                    if(!a.isNull(success)) {
+                        success(that.receive(data));
+                    } else {
+                        that.success();
+                    }
+                });
         }
     };
 

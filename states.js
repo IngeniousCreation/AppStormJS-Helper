@@ -280,7 +280,7 @@ StateHelper.prototype.insert = function(el, method) {
 
 		// We call a specific postLoad if needed
 		if(!a.isNull(postLoad)) {
-			if(!postLoad(result)) result.fail(); else result.done();
+			if(postLoad(result) === false) result.fail(); else result.done();
 		} else {
 			postLoadDefault(result);
 		}
