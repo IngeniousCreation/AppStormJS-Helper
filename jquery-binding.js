@@ -184,11 +184,11 @@ $.fn.loadBefore = function(idList) {
  *
  * @returns {$.fn}
  */
-$.fn.insertAfter = function() {
-	var el  = $(this).selector;
-	this.stateHelper.append(el);
-	return this;
-};
+// $.fn.insertAfter = function() {
+// 	var el  = $(this).selector;
+// 	this.stateHelper.append(el);
+// 	return this;
+// };
 
 /**
  * replace

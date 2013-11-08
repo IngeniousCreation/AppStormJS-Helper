@@ -35,9 +35,9 @@ var DataHelper = function(settings) {
                 s    = null;
 
             if(secure) {
-                s = this.secureUrl;
+                s = this.secureUrl || this.settings.secureUrl;
             } else {
-                s = this.unsecureUrl;
+                s = this.unsecureUrl || this.settings.unsecureUrl;
             }
 
             if(!a.isNull(s[2])) {
@@ -94,16 +94,42 @@ var DataHelper = function(settings) {
                 });
             return request;
         },
+        filePost: function(path, data, success, error, xhr) {
+            var that = this,
+                request = $.ajax({
+                    url: that.getHost(path),
+                    type: 'POST',
+                    xhr: xhr,
+                    data: data,
+                    cache: false,
+                    contentType: false,
+                    processData: false
+                });
+            return request;
+        },
+        filePut: function(path, data, success, error, xhr) {
+            var that = this,
+                request = $.ajax({
+                    url: that.getHost(path),
+                    type: 'PUT',
+                    xhr: xhr,
+                    data: data,
+                    cache: false,
+                    contentType: false,
+                    processData: false
+                });
+            return request;
+        },
         receive: function(data) {
             return data;
         },
         send: function(data) {
             return data;
         },
-        make: function(type, path, data, success, error) {
+        make: function(type, path, data, success, error, xhr) {
             var that = this;
 
-            this[type](path, this.send(data), success, error)
+            return this[type](path, this.send(data), success, error, xhr)
                 .fail(function(data){
                     if(!a.isNull(error)) {
                         error(that.receive(data));
@@ -150,6 +176,14 @@ DataHelper.prototype.put = function(path, data, success, error) {
 
 DataHelper.prototype.delete = function(path, data, success, error) {
     this.settings.make("delete", path, data, success, error);
+};
+
+DataHelper.prototype.file = function(type, path, data, success, error, xhr) {
+    if(type.toLocaleLowerCase() === "post") {
+        this.settings.make("filePost", path, data, success, error, xhr);
+    } else {
+        this.settings.make("filePut", path, data, success, error, xhr);
+    }
 };
 
 DataHelper.prototype.head = function(path, data, success, error) {
